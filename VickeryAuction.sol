@@ -59,27 +59,29 @@ contract VickeryAuction{
 
 
         modifier checkCommitmentPahseLenght(){
-            require(gracePeriod < block.number && block.number <= gracePeriod + commitmentPhaseLength);_;
+            require(gracePeriod < block.number &&
+                        block.number <= gracePeriod + commitmentPhaseLength, "not in commitment phase");_;
         }
         modifier checkWithdrawalPhaseLength(){
-            require(gracePeriod + commitmentPhaseLength < block.number && block.number <= gracePeriod + commitmentPhaseLength + withdrawalPhaseLength);_;
+            require(gracePeriod + commitmentPhaseLength < block.number &&
+                        block.number <= gracePeriod + commitmentPhaseLength + withdrawalPhaseLength, "not in withdrawal phase" );_;
         }
         modifier checkOpeningPahseLength(){
             require(gracePeriod + commitmentPhaseLength + withdrawalPhaseLength < block.number &&
-                        block.number <= gracePeriod + commitmentPhaseLength + withdrawalPhaseLength + openingPahseLength);_;
+                        block.number <= gracePeriod + commitmentPhaseLength + withdrawalPhaseLength + openingPahseLength, "not in opening phase");_;
         }
         modifier checkAuctionEnd(){
-            require(gracePeriod + commitmentPhaseLength + withdrawalPhaseLength + openingPahseLength < block.number);_;
+            require(gracePeriod + commitmentPhaseLength + withdrawalPhaseLength + openingPahseLength < block.number, "auction not ended");_;
         }
         
  
         function commitBid( uint256 envelop) external payable checkCommitmentPahseLenght(){ 
             // the seller can't bid
-            require(msg.sender != seller);
+            require(msg.sender != seller, "seller can't commit bid");
             // won't keeep the actual deposit given cuse its gas consuming,  the sender should send the right ammount 
-            require(msg.value >= depositRequired );
+            require(msg.value >= depositRequired, "need to send the deposit" );
             // the bidder can't bid more than one time
-            require(commitedEnvelops[msg.sender] == 0);
+            require(commitedEnvelops[msg.sender] == 0, "you already called this function");
             
             commitedEnvelops[msg.sender] = envelop;
             emit CommitedEnvelop(msg.sender);
@@ -101,27 +103,40 @@ contract VickeryAuction{
             // checking if the bid and the evelop match
             uint256 tmphash = uint256(keccak256(msg.value, nonce));
             // the last condition is useful to a avoid a fake withdraw: a bidder can bid 0 then open to get the deposit back 
-            require((commitedEnvelops[msg.sender] == tmphash) && (msg.value >= reservePrice) );
+            require((commitedEnvelops[msg.sender] == tmphash) && (msg.value >= reservePrice), "haven't sent the right ammount" );
             
             // to avoid more calls of the function from the same bidder
             commitedEnvelops[msg.sender] = 0;
             emit Open(msg.sender, msg.value);
             
+            uint256 tmpBid;
+            address tmpAddress;
             if(msg.value > firstBid){
-                if (firstBid != reservePrice) // refounding
-                    firstBidAddress.transfer(firstBid + depositRequired); 
+                tmpBid = secondBid;
+                tmpAddress = secondBidAddress;
+                
+                // first bid will become the secondBid, the old second bidder will be refounded
+                secondBid = firstBid;
+                secondBidAddress = firstBidAddress;
                     
                 firstBid = msg.value;
                 firstBidAddress = msg.sender;
                 emit FirstBid(msg.sender, msg.value);
                 
+                // prefer first to set the values and then to transfer the money
+                if (tmpBid > reservePrice)
+                    tmpAddress.transfer(tmpBid + depositRequired);
+                
             }else if (msg.value > secondBid) {
-                if (secondBid != reservePrice) 
-                    secondBidAddress.transfer(firstBid + depositRequired);
+                tmpBid = secondBid;
+                tmpAddress = secondBidAddress;
                 
                 secondBid = msg.value;
                 secondBidAddress = msg.sender;
                 emit SecondBid(msg.sender, msg.value);
+                
+                if (tmpBid > reservePrice)
+                    tmpAddress.transfer(tmpBid + depositRequired);
             
             }else
                 msg.sender.transfer(msg.value + depositRequired);
@@ -130,7 +145,7 @@ contract VickeryAuction{
         
         function finalize() external checkAuctionEnd(){
             // only the seller can call this
-            require(msg.sender == seller);
+            require(msg.sender == seller, "only the seller can call this function");
             
             if (secondBid != reservePrice)
                 secondBidAddress.transfer(secondBid + depositRequired);
@@ -160,15 +175,12 @@ contract VickeryAuction{
         /*
         * Can be used to retrive the hash to be passed to the open function
         */
-        function doKeccak(uint256 value, uint256 nonce) external {
-            emit Hash(keccak256(value,nonce));
+        function doKeccak(uint256 nonce) external payable{
+            emit Hash(keccak256(msg.value,nonce));
         }
         
         
 }
-
-
-
 
 
 
