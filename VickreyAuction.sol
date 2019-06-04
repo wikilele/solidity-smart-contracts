@@ -1,16 +1,23 @@
 pragma solidity ^0.4.22;
+import "./SimpleEscrow.sol";
 
 // the contract itself will act as the third party auction house
-contract VickeryAuction{
+contract VickreyAuction{
     // length of each of the 3 phases expressed in mined blocks
     uint32 commitmentPhaseLength;
     uint32 withdrawalPhaseLength;
     uint32 openingPahseLength;
+    // finalize funztion ca be called only one time
+    bool finalizeCalled = false;
     uint256 public reservePrice;
     uint256 public depositRequired;
-    address seller; // he deploys the contract to sell something he owns
-    mapping(address => uint256) commitedEnvelops; 
-
+    address public seller; // he deploys the contract to sell something he owns
+    mapping(address => uint256) commitedEnvelops;
+    
+    // used for escrow
+    address public escrowTrustedThirdParty;
+    SimpleEscrow simpleescrow;
+    
     uint256 gracePeriod;
     
     uint256 firstBid;
@@ -29,14 +36,15 @@ contract VickeryAuction{
     // testing related evetnts
     event NewBlock(uint256 blockNum);
     event Hash(bytes32 h); 
-    
-    
     constructor (uint256  _reservePrice,
                 uint32 _commitmentPhaseLength,
                 uint32 _withdrawalPhaseLength,
                 uint32 _openingPahseLength,
                 uint256 _depositRequired,
+                address _escrowTrustedThirdParty,
                 uint32 miningRate)public {
+            // the deposit must be at least two times the reservePrice
+            require(_depositRequired >= 2*_reservePrice);
             // getting the address of the contract creator
             seller = msg.sender;
             reservePrice = _reservePrice;
@@ -46,10 +54,12 @@ contract VickeryAuction{
     
             depositRequired = _depositRequired;    
             
+            escrowTrustedThirdParty = _escrowTrustedThirdParty;
+            
             // miningRate == 15 means that on average one block is mined every 15 seconds
             gracePeriod = block.number + 5*60 / miningRate; 
             
-            /*
+            /**
             * Since the first bid is init to reservePrice the bidder to win has to al least offer reservePrice + 1
             * The semantic is not perfect, but keeping it in this way allows the code to be more clean
             */
@@ -143,10 +153,13 @@ contract VickeryAuction{
         }
         
         
-        function finalize() external checkAuctionEnd(){
+        function finalize() public checkAuctionEnd(){
+            require(finalizeCalled == false, "finalize function already called");
             // only the seller can call this
             require(msg.sender == seller, "only the seller can call this function");
+            finalizeCalled = true;
             
+            // if there is a time the first one who opened the envelop wins
             if (secondBid != reservePrice)
                 secondBidAddress.transfer(secondBid + depositRequired);
             
@@ -154,13 +167,38 @@ contract VickeryAuction{
             emit Winner(firstBidAddress);
             firstBidAddress.transfer(firstBid - secondBid + depositRequired);
             
-            // TODO implement escrow??
-            
-            seller.transfer(secondBid);
-            
-            //burning remaining ether
+              //burning remaining ether
             address burnAddress = 0x0;
-            burnAddress.transfer(address(this).balance);
+            burnAddress.transfer(address(this).balance - secondBid);
+
+            //seller.transfer(secondBid);
+            simpleescrow = new SimpleEscrow(seller,firstBidAddress,escrowTrustedThirdParty);
+            address(simpleescrow).transfer(secondBid);
+        }
+        
+        // escrow related wrappers
+        modifier checkEscrowSender(){
+            require(msg.sender == seller || msg.sender == firstBidAddress || msg.sender == escrowTrustedThirdParty);_;
+        }
+        
+        function acceptEscrow() public checkAuctionEnd() checkEscrowSender(){
+            require(finalizeCalled == true);
+            
+            simpleescrow.accept(msg.sender);
+        }
+        
+        function refusetEscrow() public checkAuctionEnd() checkEscrowSender(){
+            require(finalizeCalled == true);
+            
+            simpleescrow.refuse(msg.sender);
+        }
+        
+        function concludeEscrow() public checkAuctionEnd(){
+            require(finalizeCalled == true);
+            // only the trusted third party can conclude
+            require(msg.sender == escrowTrustedThirdParty);
+            
+            simpleescrow.conclude();
         }
         
         
@@ -179,8 +217,9 @@ contract VickeryAuction{
             emit Hash(keccak256(msg.value,nonce));
         }
         
-        
 }
+
+
 
 
 
