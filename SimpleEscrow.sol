@@ -16,7 +16,12 @@ contract SimpleEscrow{
     bool winnerBidderRefused = false;
     bool sellerRefused = false;
     
+    event EscrowAccepted(address subj);
+    event EscrowRefused(address subj);
+    event EscrowClosed();
+    
     constructor (address _seller, address _bidder, address _trustedThirdParty) public payable {
+        require(isContract(msg.sender));
         seller = _seller;
         winnerBidder = _bidder;
         trustedThirdParty = _trustedThirdParty;
@@ -41,11 +46,13 @@ contract SimpleEscrow{
         if (addr == seller) sellerAccepted = true;
         else if (addr == winnerBidder) winnerBidderAccepted = true;
         else if (addr == trustedThirdParty) thirdPartyAccepted = true;
+        emit EscrowAccepted(addr);
     }
     
     function refuse(address addr) public checkSender() {
         if (addr == seller) sellerRefused = true;
         else if (addr == winnerBidder) winnerBidderRefused = true;
+        emit EscrowRefused(addr);
 
     }
     
@@ -60,9 +67,40 @@ contract SimpleEscrow{
         
         else if (sellerRefused && winnerBidderRefused)
             winnerBidder.transfer(address(this).balance);
+        
+        emit EscrowClosed();
     }
     
+    // checking if the address is a contract address
+    function isContract(address _addr) private view returns (bool){
+        uint32 size;
+        assembly {
+             size := extcodesize(_addr)
+        }
+        return (size > 0);
+    }
+    
+    // getters
+    function getWinnerBidder() public view returns(address){
+        return winnerBidder;
+    }
+    
+    function getSeller() public view returns (address){
+        return seller;
+    }
+    
+    function getTrustedThirdParty()public view returns (address){
+        return trustedThirdParty;
+    } 
 }
+
+
+
+
+
+
+
+
 
 
 

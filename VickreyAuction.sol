@@ -1,21 +1,21 @@
 pragma solidity ^0.4.22;
 import "./SimpleEscrow.sol";
 
-// the contract itself will act as the third party auction house
+
 contract VickreyAuction{
     // length of each of the 3 phases expressed in mined blocks
-    uint32 commitmentPhaseLength;
-    uint32 withdrawalPhaseLength;
-    uint32 openingPahseLength;
+    uint256 commitmentPhaseLength;
+    uint256 withdrawalPhaseLength;
+    uint256 openingPahseLength;
     // finalize funztion ca be called only one time
     bool finalizeCalled = false;
-    uint256 public reservePrice;
-    uint256 public depositRequired;
-    address public seller; // he deploys the contract to sell something he owns
+    uint256 reservePrice;
+    uint256 depositRequired;
+    address seller; // he deploys the contract to sell something he owns
     mapping(address => uint256) commitedEnvelops;
     
     // used for escrow
-    address public escrowTrustedThirdParty;
+    address escrowTrustedThirdParty;
     SimpleEscrow simpleescrow;
     
     uint256 gracePeriod;
@@ -26,6 +26,7 @@ contract VickreyAuction{
     address secondBidAddress;
     
     // events
+    event AuctionCreated(uint256 availableIn); // getting the number of blocks corresponding to the grace period
     event CommitedEnvelop(address bidderAddress);
     event Withdraw(address leavingBidderAddress);
     event Open(address bidderAddress, uint256 value);
@@ -36,25 +37,26 @@ contract VickreyAuction{
     // testing related evetnts
     event NewBlock(uint256 blockNum);
     event Hash(bytes32 h); 
+    
     constructor (uint256  _reservePrice,
-                uint32 _commitmentPhaseLength,
-                uint32 _withdrawalPhaseLength,
-                uint32 _openingPahseLength,
+                uint256 _commitmentPhaseLength,
+                uint256 _withdrawalPhaseLength,
+                uint256 _openingPahseLength,
                 uint256 _depositRequired,
-                address _escrowTrustedThirdParty,
+                address _seller,
                 uint32 miningRate)public {
             // the deposit must be at least two times the reservePrice
             require(_depositRequired >= 2*_reservePrice);
-            // getting the address of the contract creator
-            seller = msg.sender;
+            
+            seller = _seller;
             reservePrice = _reservePrice;
             commitmentPhaseLength = _commitmentPhaseLength;
             withdrawalPhaseLength = _withdrawalPhaseLength;
             openingPahseLength = _openingPahseLength;
     
             depositRequired = _depositRequired;    
-            
-            escrowTrustedThirdParty = _escrowTrustedThirdParty;
+            // the auction house will also be the trusted third party for the escrow
+            escrowTrustedThirdParty = msg.sender;
             
             // miningRate == 15 means that on average one block is mined every 15 seconds
             gracePeriod = block.number + 5*60 / miningRate; 
@@ -65,6 +67,8 @@ contract VickreyAuction{
             */
             secondBid = firstBid = reservePrice; 
             secondBidAddress = firstBidAddress = this;
+            
+            emit AuctionCreated( 5*60 / miningRate);
         }
 
 
@@ -128,6 +132,7 @@ contract VickreyAuction{
                 // first bid will become the secondBid, the old second bidder will be refounded
                 secondBid = firstBid;
                 secondBidAddress = firstBidAddress;
+                emit SecondBid(secondBidAddress, secondBid);
                     
                 firstBid = msg.value;
                 firstBidAddress = msg.sender;
@@ -159,6 +164,9 @@ contract VickreyAuction{
             require(msg.sender == seller, "only the seller can call this function");
             finalizeCalled = true;
             
+            if(firstBid == reservePrice) // noone has betted
+                return;
+                
             // if there is a time the first one who opened the envelop wins
             if (secondBid != reservePrice)
                 secondBidAddress.transfer(secondBid + depositRequired);
@@ -201,6 +209,39 @@ contract VickreyAuction{
             simpleescrow.conclude();
         }
         
+        // getters
+        function getReservePrice() public view returns(uint256){
+            return reservePrice;
+        }
+        function getSeller() public view returns(address){
+            return seller;
+        }
+        
+        function getDepositRequired() public view returns(uint256){
+            return depositRequired;
+        }
+        
+        function getTrustedThirdParty() public view returns(address){
+            return escrowTrustedThirdParty;
+        }
+        
+        // functions to know how many blocks are left to the end of each phase
+        function getGracePeriod() public view returns(uint256){
+            require(block.number <= gracePeriod);
+            return gracePeriod - block.number;
+        }
+        
+        function getCommitmentPhaseLength() public view  checkCommitmentPahseLenght() returns(uint256){
+            return gracePeriod + commitmentPhaseLength - block.number;
+        }
+        
+        function getWithdrawalPhaseLength() public view  checkWithdrawalPhaseLength() returns(uint256){
+            return gracePeriod + commitmentPhaseLength + withdrawalPhaseLength - block.number;
+        }
+        
+        function getOpeningPhaseLength() public view checkOpeningPahseLength() returns(uint256){
+            return gracePeriod + commitmentPhaseLength + withdrawalPhaseLength + openingPahseLength - block.number;
+        }
         
         /*
         * The function above are added only to test better the contract.
@@ -218,6 +259,14 @@ contract VickreyAuction{
         }
         
 }
+
+
+
+
+
+
+
+
 
 
 
