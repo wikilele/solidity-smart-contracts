@@ -33,7 +33,7 @@ contract DutchAuction{
                 address _seller,
                 IDecreasingStrategy _decrStratedy,
                 uint32 miningRate) public{
-            
+            require(_initailPrice > _reservePrice);
             openedForLength = _openedForLength;
             seller = _seller;
             initialPrice = _initailPrice;

@@ -56,28 +56,21 @@ contract LinearDecreasingStrategy is IDecreasingStrategy {
     
 }
 
-/* TODO check if delete this
-contract ExponentialDecreasingStrategy is IDecreasingStrategy{
+
+contract InverseLogarithmicDecreasingStrategy is IDecreasingStrategy{
     
     function getCurrentPrice(uint256 elapsedTime,
                             uint256 totalTime,        
                             uint256 initailPrice,
                             uint256 reservePrice) public pure returns(uint256){
             uint256 y2 = initailPrice - reservePrice;
-            uint256 b = log2(y2 + 1)/totalTime;
-                 
-            return exp2(b*elapsedTime) -1;               
+            uint256 a = y2/log2(totalTime + 1);
+            
+            uint256 tmpval = a*log2(elapsedTime + 1); 
+            return tmpval + (y2 - 2*tmpval);
             }
                             
-    function exp2(uint x) private pure returns(uint){
-        uint res = 1;
-        for(uint i = 0; i<x; i++){
-            res = res*2;
-        }
-        return res;
-    }
-    
-}*/
+}
 
 contract LogarithmicDecreasingStrategy is IDecreasingStrategy{
     
