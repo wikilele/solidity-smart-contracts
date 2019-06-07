@@ -17,10 +17,10 @@ contract DutchAuction{
     SimpleEscrow simpleescrow;
     
     uint256 gracePeriod;
-    bool bidSubmitted = false; // TODO check if is useful
+    bool bidSubmitted = false; 
     // events
     event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
-
+    event NotEnoughMoney(uint256 sent, uint256 price);
     event Winner(address winnerBidder);
     
     // testing related evetnts
@@ -65,10 +65,12 @@ contract DutchAuction{
             if(msg.value >= currentPrice){
                 bidSubmitted = true;
                 firstBidAddress = msg.sender;
+                emit Winner(msg.sender);
                 simpleescrow = new SimpleEscrow(seller,firstBidAddress,escrowTrustedThirdParty);
                 address(simpleescrow).transfer(msg.value);
             } else {
                 // sending the money back
+                emit NotEnoughMoney(msg.value, currentPrice);
                 msg.sender.transfer(msg.value);
             }
         }
