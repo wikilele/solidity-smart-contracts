@@ -21,6 +21,7 @@ contract SimpleEscrow{
     event EscrowClosed();
     
     constructor (address _seller, address _bidder, address _trustedThirdParty) public payable {
+        require(_seller != _bidder && _seller != _trustedThirdParty && _bidder != _trustedThirdParty);
         require(isContract(msg.sender));
         seller = _seller;
         winnerBidder = _bidder;
@@ -74,7 +75,7 @@ contract SimpleEscrow{
     // checking if the address is a contract address
     function isContract(address _addr) private view returns (bool){
         uint32 size;
-        assembly {
+        assembly{
              size := extcodesize(_addr)
         }
         return (size > 0);

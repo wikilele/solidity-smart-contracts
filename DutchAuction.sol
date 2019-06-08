@@ -20,8 +20,8 @@ contract DutchAuction{
     bool bidSubmitted = false; 
     // events
     event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
-    event NotEnoughMoney(uint256 sent, uint256 price);
-    event Winner(address winnerBidder);
+    event NotEnoughMoney(address bidder, uint256 sent, uint256 price);
+    event Winner(address winnerBidder, uint256 bid);
     
     // testing related evetnts
     event NewBlock(uint256 blockNum);
@@ -33,6 +33,7 @@ contract DutchAuction{
                 address _seller,
                 IDecreasingStrategy _decrStratedy,
                 uint32 miningRate) public{
+            require(_seller != msg.sender);
             require(_initailPrice > _reservePrice);
             openedForLength = _openedForLength;
             seller = _seller;
@@ -65,12 +66,12 @@ contract DutchAuction{
             if(msg.value >= currentPrice){
                 bidSubmitted = true;
                 firstBidAddress = msg.sender;
-                emit Winner(msg.sender);
+                emit Winner(msg.sender, msg.value);
                 simpleescrow = new SimpleEscrow(seller,firstBidAddress,escrowTrustedThirdParty);
                 address(simpleescrow).transfer(msg.value);
             } else {
                 // sending the money back
-                emit NotEnoughMoney(msg.value, currentPrice);
+                emit NotEnoughMoney(msg.sender,msg.value, currentPrice);
                 msg.sender.transfer(msg.value);
             }
         }
@@ -123,7 +124,7 @@ contract DutchAuction{
         }
         
         // test purposes only
-         function addBlock() public  payable{
+         function addBlock() public {
             emit NewBlock(block.number);
         }
         

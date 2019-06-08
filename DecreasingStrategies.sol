@@ -67,7 +67,7 @@ contract InverseLogarithmicDecreasingStrategy is IDecreasingStrategy{
             uint256 a = y2/log2(totalTime + 1);
             
             uint256 tmpval = a*log2(elapsedTime + 1); 
-            return tmpval + (y2 - 2*tmpval);
+            return y2 - tmpval;
             }
                             
 }

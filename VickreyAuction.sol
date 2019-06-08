@@ -11,7 +11,7 @@ contract VickreyAuction{
     bool finalizeCalled = false;
     uint256 reservePrice;
     uint256 depositRequired;
-    address seller; // he deploys the contract to sell something he owns
+    address seller; 
     mapping(address => uint256) commitedEnvelops;
     
     // used for escrow
@@ -26,13 +26,13 @@ contract VickreyAuction{
     address secondBidAddress;
     
     // events
-    event AuctionCreated(uint256 availableIn); // getting the number of blocks corresponding to the grace period
+    event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
     event CommitedEnvelop(address bidderAddress);
     event Withdraw(address leavingBidderAddress);
     event Open(address bidderAddress, uint256 value);
     event FirstBid(address bidderAddress, uint256 value);
     event SecondBid(address bidderAddress, uint256 value);
-    event Winner(address winnerBidder);
+    event Winner(address winnerBidder, uint256 value);
     
     // testing related evetnts
     event NewBlock(uint256 blockNum);
@@ -44,7 +44,8 @@ contract VickreyAuction{
                 uint256 _openingPahseLength,
                 uint256 _depositRequired,
                 address _seller,
-                uint32 miningRate)public {
+                uint32 miningRate) public{
+            require(_seller != msg.sender);
             // the deposit must be at least two times the reservePrice
             require(_depositRequired >= 2*_reservePrice);
             
@@ -53,7 +54,7 @@ contract VickreyAuction{
             commitmentPhaseLength = _commitmentPhaseLength;
             withdrawalPhaseLength = _withdrawalPhaseLength;
             openingPahseLength = _openingPahseLength;
-    
+           
             depositRequired = _depositRequired;    
             // the auction house will also be the trusted third party for the escrow
             escrowTrustedThirdParty = msg.sender;
@@ -69,6 +70,7 @@ contract VickreyAuction{
             secondBidAddress = firstBidAddress = this;
             
             emit AuctionCreated( 5*60 / miningRate);
+            
         }
 
 
@@ -172,7 +174,7 @@ contract VickreyAuction{
                 secondBidAddress.transfer(secondBid + depositRequired);
             
             // the winner pays the ammount offered by the second winner
-            emit Winner(firstBidAddress);
+            emit Winner(firstBidAddress, firstBid);
             firstBidAddress.transfer(firstBid - secondBid + depositRequired);
             
               //burning remaining ether
@@ -247,7 +249,7 @@ contract VickreyAuction{
         * The function above are added only to test better the contract.
         * In a real environment they should be removed
         */
-        function addBlock() public  payable{
+        function addBlock() public{
             emit NewBlock(block.number);
         }
         
