@@ -11,7 +11,7 @@ contract VickreyAuction{
     bool finalizeCalled = false;
     uint256 reservePrice;
     uint256 depositRequired;
-    address seller; // he deploys the contract to sell something he owns
+    address seller; 
     mapping(address => uint256) commitedEnvelops;
     
     // used for escrow
@@ -26,17 +26,17 @@ contract VickreyAuction{
     address secondBidAddress;
     
     // events
-    event AuctionCreated(uint256 availableIn); // getting the number of blocks corresponding to the grace period
+    event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
     event CommitedEnvelop(address bidderAddress);
     event Withdraw(address leavingBidderAddress);
     event Open(address bidderAddress, uint256 value);
     event FirstBid(address bidderAddress, uint256 value);
     event SecondBid(address bidderAddress, uint256 value);
-    event Winner(address winnerBidder);
+    event Winner(address winnerBidder, uint256 value);
     
-    // testing related evetnts
+    // testing related event
     event NewBlock(uint256 blockNum);
-    event Hash(bytes32 h); 
+
     
     constructor (uint256  _reservePrice,
                 uint256 _commitmentPhaseLength,
@@ -44,16 +44,17 @@ contract VickreyAuction{
                 uint256 _openingPahseLength,
                 uint256 _depositRequired,
                 address _seller,
-                uint32 miningRate)public {
+                uint32 miningRate) public{
+            require(_seller != msg.sender, "the seller can't create the auction");
             // the deposit must be at least two times the reservePrice
-            require(_depositRequired >= 2*_reservePrice);
+            require(_depositRequired >= 2*_reservePrice,"deposit must be >= 2*reservePrice");
             
             seller = _seller;
             reservePrice = _reservePrice;
             commitmentPhaseLength = _commitmentPhaseLength;
             withdrawalPhaseLength = _withdrawalPhaseLength;
             openingPahseLength = _openingPahseLength;
-    
+           
             depositRequired = _depositRequired;    
             // the auction house will also be the trusted third party for the escrow
             escrowTrustedThirdParty = msg.sender;
@@ -69,6 +70,7 @@ contract VickreyAuction{
             secondBidAddress = firstBidAddress = this;
             
             emit AuctionCreated( 5*60 / miningRate);
+            
         }
 
 
@@ -90,6 +92,7 @@ contract VickreyAuction{
         
  
         function commitBid( uint256 envelop) external payable checkCommitmentPahseLenght(){ 
+            require(msg.sender != escrowTrustedThirdParty,"escrow third party can't commit bid");
             // the seller can't bid
             require(msg.sender != seller, "seller can't commit bid");
             // won't keeep the actual deposit given cuse its gas consuming,  the sender should send the right ammount 
@@ -123,11 +126,11 @@ contract VickreyAuction{
             commitedEnvelops[msg.sender] = 0;
             emit Open(msg.sender, msg.value);
             
-            uint256 tmpBid;
-            address tmpAddress;
+            uint256 oldSecondBid;
+            address oldSecondBidAddress;
             if(msg.value > firstBid){
-                tmpBid = secondBid;
-                tmpAddress = secondBidAddress;
+                oldSecondBid = secondBid;
+                oldSecondBidAddress = secondBidAddress;
                 
                 // first bid will become the secondBid, the old second bidder will be refounded
                 secondBid = firstBid;
@@ -139,19 +142,19 @@ contract VickreyAuction{
                 emit FirstBid(msg.sender, msg.value);
                 
                 // prefer first to set the values and then to transfer the money
-                if (tmpBid > reservePrice)
-                    tmpAddress.transfer(tmpBid + depositRequired);
+                if (oldSecondBid > reservePrice)
+                    oldSecondBidAddress.transfer(oldSecondBid + depositRequired);
                 
             }else if (msg.value > secondBid) {
-                tmpBid = secondBid;
-                tmpAddress = secondBidAddress;
+                oldSecondBid = secondBid;
+                oldSecondBidAddress = secondBidAddress;
                 
                 secondBid = msg.value;
                 secondBidAddress = msg.sender;
                 emit SecondBid(msg.sender, msg.value);
                 
-                if (tmpBid > reservePrice)
-                    tmpAddress.transfer(tmpBid + depositRequired);
+                if (oldSecondBid > reservePrice)
+                    oldSecondBidAddress.transfer(oldSecondBid + depositRequired);
             
             }else
                 msg.sender.transfer(msg.value + depositRequired);
@@ -160,19 +163,19 @@ contract VickreyAuction{
         
         function finalize() public checkAuctionEnd(){
             require(finalizeCalled == false, "finalize function already called");
-            // only the seller can call this
-            require(msg.sender == seller, "only the seller can call this function");
+            // only the auction house can call this
+            require(msg.sender == escrowTrustedThirdParty, "only the auction house can call this function");
             finalizeCalled = true;
             
             if(firstBid == reservePrice) // noone has betted
                 return;
                 
-            // if there is a time the first one who opened the envelop wins
+            // TIE RESOLUTION RULE if there is a tie the first one who opened the envelop wins
             if (secondBid != reservePrice)
                 secondBidAddress.transfer(secondBid + depositRequired);
             
             // the winner pays the ammount offered by the second winner
-            emit Winner(firstBidAddress);
+            emit Winner(firstBidAddress, firstBid);
             firstBidAddress.transfer(firstBid - secondBid + depositRequired);
             
               //burning remaining ether
@@ -247,15 +250,15 @@ contract VickreyAuction{
         * The function above are added only to test better the contract.
         * In a real environment they should be removed
         */
-        function addBlock() public  payable{
+        function addBlock() public{
             emit NewBlock(block.number);
         }
         
         /*
         * Can be used to retrive the hash to be passed to the open function
         */
-        function doKeccak(uint256 nonce) external payable{
-            emit Hash(keccak256(msg.value,nonce));
+        function doKeccak(uint256 value, uint256 nonce) external pure returns(uint256) {
+            return uint256(keccak256(value,nonce));
         }
         
 }
