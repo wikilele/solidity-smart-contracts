@@ -23,7 +23,7 @@ contract DutchAuction{
     event NotEnoughMoney(address bidder, uint256 sent, uint256 price);
     event Winner(address winnerBidder, uint256 bid);
     
-    // testing related evetnts
+    // testing related event
     event NewBlock(uint256 blockNum);
 
     
@@ -35,6 +35,7 @@ contract DutchAuction{
                 uint32 miningRate) public{
             require(_seller != msg.sender);
             require(_initailPrice > _reservePrice);
+            
             openedForLength = _openedForLength;
             seller = _seller;
             initialPrice = _initailPrice;
@@ -60,6 +61,7 @@ contract DutchAuction{
         
         
         function bid() public payable checkPeriod(){
+            require(msg.sender != seller && msg.sender != escrowTrustedThirdParty);
             require(bidSubmitted == false, "someone else has already bidded");
             uint256 currentPrice = decrStratedy.getCurrentPrice(block.number - gracePeriod, openedForLength, initialPrice, reservePrice);
             
