@@ -34,7 +34,7 @@ contract DutchAuction{
                 IDecreasingStrategy _decrStratedy,
                 uint32 miningRate) public{
             require(_seller != msg.sender);
-            require(_initailPrice > _reservePrice);
+            require(_initailPrice > _reservePrice && _reservePrice >= 0);
             
             openedForLength = _openedForLength;
             seller = _seller;
