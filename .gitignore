@@ -1,7 +1,8 @@
 16-Ethereum.pdf
 17-Solidity.pdf
 VickeryAuction_test.sol
-report.odt
+*.odt
 
 .~lock.report.odt#
 DutchAuctionInputParameters.png
+report/*
