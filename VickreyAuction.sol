@@ -7,7 +7,7 @@ contract VickreyAuction{
     uint256 commitmentPhaseLength;
     uint256 withdrawalPhaseLength;
     uint256 openingPahseLength;
-    // finalize funztion ca be called only one time
+    // finalize function can be called only one time
     bool finalizeCalled = false;
     uint256 reservePrice;
     uint256 depositRequired;

@@ -40,7 +40,7 @@ contract SimpleEscrow{
     }
     
     function () public payable checkSender() checkBalance(){
-        // only the creator can send the conteded money
+        // only the creator can send the contended moneys
     }
 
     function accept(address addr) public checkSender() checkBalance() {
