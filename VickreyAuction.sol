@@ -95,7 +95,7 @@ contract VickreyAuction{
             require(msg.sender != escrowTrustedThirdParty,"escrow third party can't commit bid");
             // the seller can't bid
             require(msg.sender != seller, "seller can't commit bid");
-            // won't keeep the actual deposit given cuse its gas consuming,  the sender should send the right ammount 
+            // won't keeep the actual deposit given,  the sender should send the right ammount 
             require(msg.value >= depositRequired, "need to send the deposit" );
             // the bidder can't bid more than one time
             require(commitedEnvelops[msg.sender] == 0, "you already called this function");
