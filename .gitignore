@@ -6,3 +6,6 @@ VickeryAuction_test.sol
 .~lock.report.odt#
 DutchAuctionInputParameters.png
 report/*
+
+!code.pdf
+!report.pdf
