@@ -1,20 +1,18 @@
 pragma solidity ^0.4.22;
-import "./SimpleEscrow.sol";
+import "./ISmartAuction.sol";
 import "./DecreasingStrategies.sol";
 
 
-contract DutchAuction{
+contract DutchAuction is ISmartAuction{
     uint256 openedForLength;
     uint256 initialPrice;
-    uint256 reservePrice;
-    address seller; 
+  
     
     IDecreasingStrategy decrStratedy;
     
     // used for escrow
     address firstBidAddress;
-    address escrowTrustedThirdParty;
-    SimpleEscrow simpleescrow;
+
     
     uint256 gracePeriod;
     bool bidSubmitted = false; 
@@ -23,9 +21,6 @@ contract DutchAuction{
     event NotEnoughMoney(address bidder, uint256 sent, uint256 price);
     event Winner(address winnerBidder, uint256 bid);
     
-    // testing related event
-    event NewBlock(uint256 blockNum);
-
     
     constructor (uint256  _reservePrice,
                 uint256 _initailPrice,
@@ -87,12 +82,15 @@ contract DutchAuction{
             require(bidSubmitted == true);
             
             simpleescrow.accept(msg.sender);
+            emit EscrowAccepted(msg.sender);
         }
         
-        function refusetEscrow() public  checkEscrowSender(){
+        function refuseEscrow() public  checkEscrowSender(){
             require(bidSubmitted == true);
             
             simpleescrow.refuse(msg.sender);
+            
+            emit EscrowRefused(msg.sender);
         }
         
         function concludeEscrow() public{
@@ -101,16 +99,12 @@ contract DutchAuction{
             require(msg.sender == escrowTrustedThirdParty);
             
             simpleescrow.conclude();
+            
+            emit EscrowClosed();
         }
         
         // getter
-        function getSeller() public view returns(address){
-            return seller;
-        }
-        
-        function getReservePrice() public view returns (uint256){
-            return reservePrice;
-        }
+
         
         function getInitialPrice() public view returns(uint256){
             return initialPrice;
@@ -125,10 +119,7 @@ contract DutchAuction{
             return gracePeriod + openedForLength - block.number;
         }
         
-        // test purposes only
-         function addBlock() public {
-            emit NewBlock(block.number);
-        }
+ 
         
     }    
         
