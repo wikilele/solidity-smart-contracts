@@ -17,7 +17,6 @@ contract DutchAuction is ISmartAuction{
     // events
     event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
     event NotEnoughMoney(address bidder, uint256 sent, uint256 price);
-    event Winner(address winnerBidder, uint256 bid);
     
     
     constructor (uint256  _reservePrice,
@@ -75,15 +74,19 @@ contract DutchAuction is ISmartAuction{
         modifier checkEscrowSender(){
             require(msg.sender == seller || msg.sender == firstBidAddress || msg.sender == escrowTrustedThirdParty);_;
         }
+
+        modifier checkAuctionEnded(){
+            require(block.number > gracePeriod + openedForLength + 1,"auction not ended"); _;
+        }
         
-        function acceptEscrow() public checkEscrowSender() checkPeriod(){
+        function acceptEscrow() public checkEscrowSender() checkAuctionEnded(){
             require(bidSubmitted == true, "bid not submitted");
             
             simpleescrow.accept(msg.sender);
             emit EscrowAccepted(msg.sender);
         }
         
-        function refuseEscrow() public  checkEscrowSender() checkPeriod(){
+        function refuseEscrow() public  checkEscrowSender() checkAuctionEnded(){
             require(bidSubmitted == true);
             
             simpleescrow.refuse(msg.sender);
@@ -91,7 +94,7 @@ contract DutchAuction is ISmartAuction{
             emit EscrowRefused(msg.sender);
         }
         
-        function concludeEscrow() public checkPeriod(){
+        function concludeEscrow() public checkAuctionEnded(){
             require(bidSubmitted == true);
             // only the trusted third party can conclude
             require(msg.sender == escrowTrustedThirdParty);

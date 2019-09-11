@@ -12,9 +12,6 @@ contract VickreyAuction is ISmartAuction{
     bool finalizeCalled = false;
     uint256 depositRequired;
     mapping(address => uint256) commitedEnvelops;
-
-    
-    uint256 gracePeriod;
     
     uint256 firstBid;
     address firstBidAddress;
@@ -23,15 +20,12 @@ contract VickreyAuction is ISmartAuction{
     
     // events
     event AuctionCreated(uint32 availableIn); // getting the number of blocks corresponding to the grace period
-    event CommitedEnvelop(address bidderAddress);
+    event CommittedEnvelop(address bidderAddress);
     event Withdraw(address leavingBidderAddress);
     event Open(address bidderAddress, uint256 value);
     event FirstBid(address bidderAddress, uint256 value);
     event SecondBid(address bidderAddress, uint256 value);
-    event Winner(address winnerBidder, uint256 value);
     
-
-
     
     constructor (uint256  _reservePrice,
                 uint256 _commitmentPhaseLength,
@@ -96,7 +90,7 @@ contract VickreyAuction is ISmartAuction{
             require(commitedEnvelops[msg.sender] == 0, "you already called this function");
             
             commitedEnvelops[msg.sender] = envelop;
-            emit CommitedEnvelop(msg.sender);
+            emit CommittedEnvelop(msg.sender);
         }
         
         
@@ -195,7 +189,7 @@ contract VickreyAuction is ISmartAuction{
             emit EscrowAccepted(msg.sender);
         }
         
-        function refusetEscrow() public checkAuctionEnd() checkEscrowSender(){
+        function refuseEscrow() public checkAuctionEnd() checkEscrowSender(){
             require(finalizeCalled == true);
             
             simpleescrow.refuse(msg.sender);
@@ -220,9 +214,9 @@ contract VickreyAuction is ISmartAuction{
             return depositRequired;
         }
         
-        function getTrustedThirdParty() public view returns(address){
-            return escrowTrustedThirdParty;
-        }
+        // function getTrustedThirdParty() public view returns(address){
+        //     return escrowTrustedThirdParty;
+        // }
         
         
         function getCommitmentPhaseLength() public view  checkCommitmentPahseLenght() returns(uint256){
@@ -246,22 +240,4 @@ contract VickreyAuction is ISmartAuction{
         }
         
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -10,6 +10,8 @@ contract ISmartAuction{
     address escrowTrustedThirdParty;
     SimpleEscrow simpleescrow;
     
+    event Winner(address winnerBidder, uint256 value);
+
     event EscrowAccepted(address subj);
     event EscrowRefused(address subj);
     event EscrowClosed();
@@ -43,8 +45,10 @@ contract ISmartAuction{
     }
 
 
-    function destroyContract()public {
-        simpleescrow.destroyContract();
+    function destroyContract() public {
+        if (simpleescrow != address(0x0))
+            simpleescrow.destroyContract();
+            
         selfdestruct(escrowTrustedThirdParty);
     }
         
